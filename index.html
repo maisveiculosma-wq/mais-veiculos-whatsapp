@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Conectar WhatsApp • Mais Veículos</title>
+<style>
+  body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0b0b0c;color:#fff;font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:20px}
+  .box{max-width:460px;width:100%;text-align:center}
+  h1{font-size:28px;margin:0 0 6px}h1 span{color:#f5c400}
+  p{color:#bbb}
+  button{background:#1fa855;color:#fff;border:0;border-radius:14px;padding:16px 22px;font-size:18px;font-weight:700;cursor:pointer;width:100%;margin-top:18px}
+  button:disabled{opacity:.5}
+  #status{margin-top:18px;padding:14px;border-radius:12px;background:#1a1a1c;text-align:left;white-space:pre-wrap;font-size:14px;min-height:20px}
+  .ok{color:#7ee2a0}.err{color:#ff8a80}
+  a{color:#f5c400}
+</style>
+</head>
+<body>
+<div class="box">
+  <h1><span>Mais</span> Veículos</h1>
+  <p>Ligar o WhatsApp Business da loja ao CRM. O WhatsApp continua funcionando normalmente no celular.</p>
+  <button id="go" disabled>Carregando…</button>
+  <div id="status">Na janela da Meta, escolha <b>“Conectar seu app WhatsApp Business existente”</b> e confirme no celular da loja.</div>
+  <p style="font-size:13px;margin-top:22px"><a href="privacidade.html">Política de Privacidade</a></p>
+</div>
+<script>
+  const APP_ID = '2484239081986725';
+  const CONFIG_ID = '1170296475424931';
+  const st = document.getElementById('status'), btn = document.getElementById('go');
+  const info = {};
+  function show(html, cls) { st.innerHTML = html; st.className = cls || ''; }
+  window.addEventListener('message', ev => {
+    if (!/facebook\.com$/.test(new URL(ev.origin).hostname)) return;
+    let d; try { d = typeof ev.data === 'string' ? JSON.parse(ev.data) : ev.data; } catch { return; }
+    if (!d || d.type !== 'WA_EMBEDDED_SIGNUP') return;
+    if (d.event === 'FINISH' || d.event === 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING' || d.event === 'FINISH_ONLY_WABA') {
+      Object.assign(info, d.data || {});
+      show('✅ Conectado!\n\nWABA: ' + (info.waba_id || '-') + '\nNúmero (ID): ' + (info.phone_number_id || '-') + '\n\nPode voltar pro Claude e avisar que deu certo.', 'ok');
+    } else if (d.event === 'CANCEL') {
+      show('Cancelado na etapa: ' + ((d.data && d.data.current_step) || '?') + '. Pode tentar de novo.', 'err');
+    } else if (d.event === 'ERROR') {
+      show('Erro da Meta: ' + ((d.data && d.data.error_message) || JSON.stringify(d.data)), 'err');
+    }
+  });
+  window.fbAsyncInit = function () {
+    FB.init({ appId: APP_ID, autoLogAppEvents: true, xfbml: false, version: 'v25.0' });
+    btn.disabled = false; btn.textContent = 'Conectar WhatsApp';
+  };
+  btn.addEventListener('click', () => {
+    btn.disabled = true;
+    FB.login(resp => {
+      btn.disabled = false;
+      if (resp.authResponse && resp.authResponse.code) {
+        info.code_received = true;
+        if (!info.waba_id) show('Autorização recebida. Aguardando a confirmação final da Meta…');
+      } else if (!info.waba_id) {
+        show('A janela foi fechada antes de terminar. Pode tentar de novo.', 'err');
+      }
+    }, {
+      config_id: CONFIG_ID,
+      response_type: 'code',
+      override_default_response_type: true,
+      extras: { setup: {}, featureType: 'whatsapp_business_app_onboarding', sessionInfoVersion: '3' }
+    });
+  });
+</script>
+<script async defer crossorigin="anonymous" src="https://connect.facebook.net/pt_BR/sdk.js"></script>
+</body>
+</html>
